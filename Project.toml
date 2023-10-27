@@ -1,0 +1,9 @@
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+GAFramework = "91ca9103-c91c-5507-a6ff-05d8648e996f"
+GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
+MiCRM_stability = "b18b2576-abff-478e-9c74-99a4a11eb715"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
