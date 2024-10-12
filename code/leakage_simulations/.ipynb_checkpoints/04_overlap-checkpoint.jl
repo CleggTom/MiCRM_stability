@@ -24,8 +24,8 @@ function get_exponential_parameters(N,M,σ)
     return MiCRM_stability.exponential_params(gx,gs,mx,fy,λy,iy,oy)
 end
 
-function random_community(N,M,f,C)
-    c = MiCRM_stability.random_community(N,M,C)
+function random_community(N,M,f,C,o)
+    c = MiCRM_stability.overlap_community(N,M,C,o)
     Λ = fill(rand(),N)
     
     s = MiCRM_stability.get_structural_params(c.U,c.D,Λ, rand())
@@ -70,11 +70,12 @@ Threads.@threads for i = 1:Np
     k[1] += 1
     print("\r",k)
     C = rand()
-    p = random_community(N,M, get_exponential_parameters, C)
-    p_vec[i] = vcat(get_param_mean(p), C)
+    o = rand()
+    p = random_community(N,M, get_exponential_parameters, C,o)
+    p_vec[i] = [o]
     J = zeros(N+M, N+M)
     MiCRM_stability.jacobian!(p,J)
     stability[i] = get_real(eigsolve(J, 1, (:LR))[1][1]) 
 end
 
-save("./Results/data/new_sims/dynamic_stabiltiy.jld2", Dict("p" => p_vec, "l" => stability))
+save("./Results/data/new_sims/overlap_stabiltiy.jld2", Dict("p" => p_vec, "l" => stability))

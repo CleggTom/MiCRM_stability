@@ -10,37 +10,29 @@ using JLD2
 
 #functions for simulations
 function get_exponential_parameters(N,M,σ)
-    gx = rand(Uniform(σ,2.0)) .+ rand(Uniform(-σ,σ), N)
-    gs = rand(Uniform(σ,3)) .+ rand(Uniform(-σ,σ), N)
-    gw = -rand(Uniform(σ,3)) .+ rand(Uniform(-σ,σ), N)
-    mx = rand(Uniform(σ,2.0)) .+ rand(Uniform(-σ,σ), N)
+    gx = rand(Uniform(σ,1.0)) .+ rand(Uniform(-σ,σ), N)
+    gs = rand(Uniform(σ,3.0)) .+ rand(Uniform(-σ,σ), N)
+    mx = rand(Uniform(0.5,1.5)) .+ rand(Uniform(-σ,σ), N)
     
     fy = ones(N,M)
-    hy = ones(N,M)
 
     λy = zeros(N,M)
 
-    iy = rand(Uniform(σ,2.0)) .+ rand(Uniform(-σ,σ), M)
-    oy = rand(Uniform(σ,2.0)) .+ rand(Uniform(-σ,σ), M)
+    iy = rand(Uniform(σ,1.0)) .+ rand(Uniform(-σ,σ), M)
+    oy = rand(Uniform(0.5,1.5)) .+ rand(Uniform(-σ,σ), M)
 
-    return MiCRM_stability.exponential_params(gx,gs,gw,mx,fy,hy,λy,iy,oy)
+    return MiCRM_stability.exponential_params(gx,gs,mx,fy,λy,iy,oy)
 end
 
-function random_community(N,M, f)
-    U = rand(N,M) ./ (N*M)
-    # U[:,end] .= 0
-    
-    D = rand(M,M)
-    # D[:,1] .= 0
-    [D[i,:] .= D[i,:] ./ sum(D[i,:]) for i = 1:M]
-    
+function random_community(N,M,f,C)
+    c = MiCRM_stability.random_community(N,M,C)
     Λ = fill(rand(),N)
     
-    s = MiCRM_stability.get_structural_params(U,D,Λ)
+    s = MiCRM_stability.get_structural_params(c.U,c.D,Λ, rand())
     e = f(N,M, 0.1)
-    u = MiCRM_stability.util_params(N,M,s,e)
-    
-    p = MiCRM_stability.Parameters(N,M,s,e,u)
+
+    p = MiCRM_stability.Parameters(N,M,s,e,[])
+    push!(p.tmp, MiCRM_stability.calculate_g_s(p))
 
     return(p)
 end
@@ -48,6 +40,8 @@ end
 function get_param_mean(p::MiCRM_stability.Parameters)
     fe = fieldnames(MiCRM_stability.exponential_params)
     fs = fieldnames(MiCRM_stability.structural_params)
+
+    fs = filter(x -> x ∉ [:χ,:ϕ,:γ, :η], fs)
     
     ue = mean.(getfield.(Ref(p.e), fe))
     us = mean.(getfield.(Ref(p.s), fs))
@@ -63,7 +57,7 @@ get_real(x::Complex) = x.re
 
 
 #params
-N=50
+N=100
 M=100
 Np = 10000
 
@@ -75,8 +69,9 @@ k = [0]
 Threads.@threads for i = 1:Np
     k[1] += 1
     print("\r",k)
-    p = random_community(N,M, get_exponential_parameters)
-    p_vec[i] = get_param_mean(p)
+    C = rand()
+    p = random_community(N,M, get_exponential_parameters, C)
+    p_vec[i] = vcat(get_param_mean(p), C)
     J = zeros(N+M, N+M)
     MiCRM_stability.jacobian!(p,J)
     stability[i] = get_real(eigsolve(J, 1, (:LR))[1][1]) 
