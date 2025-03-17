@@ -9,17 +9,16 @@ using Distributions
 using JLD2
 
 #functions for simulations
-function get_exponential_parameters(N,M,σ)
-    gx = rand(Uniform(σ,1.0)) .+ rand(Uniform(-σ,σ), N)
-    gs = rand(Uniform(σ,3.0)) .+ rand(Uniform(-σ,σ), N)
-    mx = rand(Uniform(0.5,1.5)) .+ rand(Uniform(-σ,σ), N)
+function get_exponential_parameters(N::Int64,M::Int64,σ::Float64)
+    gx = rand(Uniform(σ,1.0)) .+ rand(Uniform(-σ,σ), N) 
+    gs = rand(Uniform(σ,2.0), N)
+    mx = gx 
     
-    fy = ones(N,M)
-
+    fy = ones(N,M) 
     λy = zeros(N,M)
 
-    iy = rand(Uniform(σ,1.0)) .+ rand(Uniform(-σ,σ), M)
-    oy = rand(Uniform(0.5,1.5)) .+ rand(Uniform(-σ,σ), M)
+    iy = zeros(M)
+    oy = ones(M)
 
     return MiCRM_stability.exponential_params(gx,gs,mx,fy,λy,iy,oy)
 end

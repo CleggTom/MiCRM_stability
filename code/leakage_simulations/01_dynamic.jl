@@ -10,14 +10,14 @@ using JLD2
 using Random
 
 #functions for simulations
+# #functions for simulations
 function get_exponential_parameters(N::Int64,M::Int64,σ::Float64)
-    gx = rand(Uniform(σ,1.0)) .+ rand(Uniform(-σ,σ), N)
+    gx = rand(Uniform(σ,2.0)) .+ rand(Uniform(-σ,σ), N)
     gs = rand(Uniform(σ,2.0)) .+ rand(Uniform(-σ,σ), N)
-    mx = rand(Uniform(0.5,1.5)) .+ rand(Uniform(-σ,σ), N)
+    mx = rand(Uniform(0.8,2.0)) .+ rand(Uniform(-σ,σ), N)
     
-    fy = ones(N,M)
-
-    λy = zeros(N,M)
+    fy = rand(Uniform(1,2)) .+ rand(Uniform(-σ,σ),N,M) 
+    λy = rand(Uniform(0.0,0.1), N, M) .+ rand(Uniform(0,σ),N,M) 
 
     iy = rand(Uniform(σ,1.0)) .+ rand(Uniform(-σ,σ), M)
     oy = rand(Uniform(0.5,1.5)) .+ rand(Uniform(-σ,σ), M)
@@ -27,12 +27,9 @@ end
 
 function random_community(N::Int64,M::Int64,f::Function,Cu::Float64,Cd::Float64)
     c = MiCRM_stability.random_community(N,M,Cu,Cd)
-    # c.U[c.U .!= 0] .= abs.( rand(Normal(1,s), sum( (c.U .!= 0)[:] ) ) )
-    Λ = fill(rand(),N)
-    
-    s = MiCRM_stability.get_structural_params(c.U, c.D, Λ, 2rand())
+    Λ = fill(rand() * 0.25, N)
+    s = MiCRM_stability.get_structural_params(c.U, c.D, Λ)
     e = f(N,M, 0.1)
-
     p = MiCRM_stability.Parameters(N,M,s,e)
 
     return(p)
@@ -42,7 +39,7 @@ function get_param_mean(p::MiCRM_stability.Parameters)
     fe = fieldnames(MiCRM_stability.exponential_params)
     fs = fieldnames(MiCRM_stability.structural_params)
 
-    fs = filter(x -> x ∉ [:χ,:ϕ,:γ, :η], fs)
+    fs = filter(x -> x ∉ [:χ,:ϕ,:γ,:η], fs)
     
     ue = mean.(getfield.(Ref(p.e), fe))
     us = mean.(getfield.(Ref(p.s), fs))

@@ -14,8 +14,8 @@ function get_switching_parameters(N,M,σ)
     gs = rand(Uniform(1,2)) .+ rand(Uniform(-σ,σ), N)
     mx = rand(Uniform(1.0,1.25)) .+ rand(Uniform(-σ,σ), N)
     
-    fy = rand(Uniform(0,3)) .+ rand(Uniform(-σ,σ),N,M) 
-    λy = rand(Uniform(-1,1)) .+ rand(Uniform(-σ,σ),N,M)
+    fy = rand(Uniform(0,2)) .+ rand(Uniform(-σ,σ),N,M) 
+    λy = rand(Uniform(0,2)) .+ rand(Uniform(-σ,σ),N,M)
 
     iy = zeros(M)
     oy = ones(M)
@@ -28,7 +28,7 @@ function random_community(N::Int64,M::Int64,f::Function,Cu::Float64,Cd::Float64)
     # c.U[c.U .!= 0] .= abs.( rand(Normal(1,s), sum( (c.U .!= 0)[:] ) ) )
     Λ = fill(rand(),N)
     
-    s = MiCRM_stability.get_structural_params(c.U, c.D, Λ, 2rand())
+    s = MiCRM_stability.get_structural_params(c.U, c.D, Λ)
     e = f(N,M, 0.1)
 
     p = MiCRM_stability.Parameters(N,M,s,e)
@@ -75,7 +75,7 @@ end
 #params
 N=100
 M=100
-Np = 100000
+Np = 10000
 
 p_vec = Vector{Any}(undef,Np)
 stability = zeros(Complex, Np)
