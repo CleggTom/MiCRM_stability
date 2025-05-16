@@ -1,0 +1,88 @@
+using Pkg 
+
+Pkg.activate(".")
+
+using MiCRM_stability
+using LinearAlgebra, KrylovKit
+using StatsBase
+using Distributions
+using JLD2
+
+#functions for simulations
+function get_exponential_parameters(N::Int64,M::Int64,σ::Float64)
+    gx = rand(Uniform(σ,1.0)) .+ rand(Uniform(-σ,σ), N) 
+    gs = rand(Uniform(σ,2.0), N)
+    mx = gx 
+    
+    fy = ones(N,M) 
+    λy = zeros(N,M)
+
+    iy = zeros(M)
+    oy = ones(M)
+
+    return MiCRM_stability.exponential_params(gx,gs,mx,fy,λy,iy,oy)
+end
+
+function jac(c)
+    x = eachrow(c.U)
+    [mean(x[i] .* x[j]) / (mean(x[i])*mean(x[j])) for i = 1:c.N-1 for j = i+1:c.N] |> mean
+end
+
+function random_community(N,M,f,μ,σ0)
+    pvec = [μ,0]
+    #generate communtiy
+    C = 0.5 - σ0 * μ * 2
+    nC = 0.5 .+ rand(Uniform(-μ,μ), 100)
+    c = MiCRM_stability.niche_model(N,M,μ)
+
+    pvec[2] = jac(c)
+    
+    Λ = fill(rand() * 0.25, N)
+    s = MiCRM_stability.get_structural_params(c.U, c.D, Λ)
+    e = f(N,M, 0.1)
+    p = MiCRM_stability.Parameters(N,M,s,e)
+
+    return(p, pvec)
+end
+
+function get_param_mean(p::MiCRM_stability.Parameters)
+    fe = fieldnames(MiCRM_stability.exponential_params)
+    fs = fieldnames(MiCRM_stability.structural_params)
+
+    fs = filter(x -> x ∉ [:χ,:ϕ,:γ, :η], fs)
+    
+    ue = mean.(getfield.(Ref(p.e), fe))
+    us = mean.(getfield.(Ref(p.s), fs))
+
+    vcat(ue..., us...) 
+end
+
+function get_real(x::T) where T <: AbstractFloat
+    x
+end
+
+get_real(x::Complex) = x.re
+
+
+#params
+N = 100
+M = 100
+Np = 10000
+
+p_vec = Vector{Any}(undef,Np)
+stability = zeros(Complex, Np)
+
+k = [0]
+
+Threads.@threads for i = 1:Np
+    k[1] += 1
+    print("\r",k)
+    C = rand()/2
+    p,q = random_community(N,M, get_exponential_parameters, C, 0.2)
+    p_vec[i] = q
+    J = zeros(N+M, N+M)
+    MiCRM_stability.jacobian!(p,J)
+    stability[i] = get_real(eigsolve(J, 1, (:LR))[1][1]) 
+end
+
+save("./Results/data/new_sims/niche_stabiltiy.jld2", Dict("p" => p_vec, "l" => stability))
