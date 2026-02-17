@@ -15,7 +15,7 @@ function get_exponential_parameters(N::Int64,M::Int64,σ::Float64)
     mx = gx .+ rand(Uniform(0,σ), N)
     
     fy = ones(N,M) .+ rand(Uniform(-σ,σ), N)
-    λy = zeros(N,M)
+    λy = zeros(N)
 
     iy = zeros(M) 
     oy = ones(M) .+ rand(Uniform(-σ,σ), N) 
