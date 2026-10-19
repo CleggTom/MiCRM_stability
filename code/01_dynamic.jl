@@ -10,7 +10,7 @@ using JLD2
 using Random
 
 #functions for simulations
-# #functions for simulations
+#parameters
 function get_exponential_parameters(N::Int64,M::Int64,σ::Float64)
     gx = rand(Uniform(σ,0.5)) .+ rand(Uniform(-σ,σ), N)
     gs = rand(Uniform(σ,2.0)) .+ rand(Uniform(-σ,σ), N)
@@ -25,6 +25,7 @@ function get_exponential_parameters(N::Int64,M::Int64,σ::Float64)
     return MiCRM_stability.exponential_params(gx,gs,mx,fy,λg,iy,oy)
 end
 
+#community generation
 function random_community(N::Int64,M::Int64,f::Function,Cu::Float64,Cd::Float64)
     #generate community
     c = MiCRM_stability.random_community(N,M,Cu,Cd)
@@ -73,23 +74,25 @@ function inner(i)
     J = zeros(N+M, N+M)
     MiCRM_stability.jacobian!(p, J)
 
-    e = eigsolve(J, 1, (:LR))
-    stability[i] = get_real(e[1][1]) 
-    stability_vec[i] = e[2][1]
-    con_stability[i] = get_real(eigsolve(J[1:N, 1:N], 1, (:LR))[1][1]) 
-    res_stability[i] = get_real(eigsolve(J[N+1:end, N+1:end], 1, (:LR))[1][1]) 
+    e = eigen(J)
+    stability[i] = get_real(e.values[end])
+    stability_vec[i] = e.vectors[:,end]
+    
+    # e = eigsolve(J, 1, (:LR))
+    # stability[i] = get_real(e[1][1]) 
+    # stability_vec[i] = e[2][1]
 end
 
+Random.seed!(1)
+
 #params
-N=100
-M=100
-Np = 100000
+N = 75
+M= 100
+Np = 10000
 
 p_vec = Vector{Any}(undef,Np)
 stability = zeros(Complex, Np)
 stability_vec = fill([], Np)
-con_stability = zeros(Complex, Np)
-res_stability = zeros(Complex, Np)
 
 k = [0]
 Threads.@threads for i = 1:Np
@@ -98,4 +101,4 @@ Threads.@threads for i = 1:Np
     inner(i)
 end
 
-save("./Results/data/new_sims/dynamic_stabiltiy.jld2", Dict("p" => p_vec, "l" => stability,"v" => stability_vec, "c" => con_stability, "r" => res_stability))
+save("./Results/data/dynamic_stabiltiy.jld2", Dict("p" => p_vec, "l" => stability, "v" => stability_vec))

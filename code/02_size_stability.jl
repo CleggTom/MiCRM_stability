@@ -19,21 +19,21 @@ function get_exponential_parameters(N::Int64,M::Int64,σ::Float64)
     λy = zeros(N)
 
     iy = zeros(M)
-    oy = rand(Uniform(0.5,1.0), M)
+    oy = rand(Uniform(0.5,1.5), M)
 
     return MiCRM_stability.exponential_params(gx,gs,mx,fy,λy,iy,oy)
 end
 
 
-function mod_community(N,M,f, Qu, Qd, L)
+function random_community(N,M,f)
     #fixed consumption per consumer
     #fixed leakage per resource
-    c = MiCRM_stability.modular_community(N,M,5,5,Qu,Qd,L,L)
+    c = MiCRM_stability.random_community(N,M, 10/N, 10/M)
 
-    Λ = rand(Uniform(0.1,0.8)) .+ rand(Uniform(-0.1,0.1),N) 
-    G = rand(Uniform(0.1,1.0)) .+ rand(Uniform(-0.1,0.1),N) 
-    α = rand(Uniform(0.1,1.0)) .+ rand(Uniform(-0.1,0.1),M) 
-    β = rand(Uniform(0.1,1.0)) .+ rand(Uniform(-0.1,0.1),M) 
+    Λ = rand(Uniform(0.1,0.8), N) 
+    G = rand(Uniform(0.1,1.0), N) 
+    α = rand(Uniform(0.1,1.0), N) 
+    β = rand(Uniform(0.1,1.0), M) 
     C_pert = zeros(M)
     
     s = MiCRM_stability.get_structural_params(c.N, c.M, c.U,c.D, Λ, G, α, β, C_pert)
@@ -51,71 +51,69 @@ end
 get_real(x::Complex) = x.re
 
 #params
-Nq = 25
-Nc = 25
-Nr = 500
-
-N = 75
-M = 100
+nN = 30
+nM = 30
+Np = 500
 
 #size vects
-q_vec = range(0.0,1.0, length = Nq)
+n_vec = Int.(floor.(10 .^ range(log10(20),log10(200), length = nN)))
+m_vec = Int.(floor.(10 .^ range(log10(20),log10(200), length = nM)))
+
+d_max = maximum(n_vec .+ m_vec)
 
 #allocate per-thread buffers
-d_max = N+M
 jac_buffers = [zeros(Float64, d_max, d_max) for _ in 1:Threads.nthreads()]
 
 #allocate results
-stability = zeros(Complex, Nq, Nq, Nr)
+stability = zeros(Complex, nN, nM, Np)
 
 #parellelise
-tasks = vec(collect(Iterators.product(1:Nq, 1:Nc, 1:Nr)))
+tasks = vec(collect(Iterators.product(1:nN, 1:nM, 1:Np)))
 total_tasks = length(tasks)
 completed = Threads.Atomic{Int}(0)
 
 #warmup
 begin
-    p = mod_community(10,10,get_exponential_parameters, 0.5, 0.5, 10)
+    p = random_community(10,10, get_exponential_parameters)
 
     J_full = jac_buffers[1]
     J_view = @view J_full[1:20, 1:20]
     MiCRM_stability.jacobian!(p,J_view)
 
     # Only store the real part as Float64 to save memory
-    try 
-        real(eigsolve(J_view, 1, :LR)[1][1])
-    catch
-        println("test didnt work")
-    end
+    real(eigsolve(J_view, 1, :LR)[1][1])
 end
 
 
 Threads.@threads for t = 1:total_tasks
-    i,c,r = tasks[t]
-    tid = Threads.threadid()
+    i,j,r = tasks[t]
+    tid = Threads.threadid()-1
 
-    Qu = Qd = q_vec[i]
+    N = n_vec[i]
+    M = m_vec[j]
+    dim = N + M
     
-    p = mod_community(N,M,get_exponential_parameters, Qu, Qd, N * c )
+    p = random_community(N,M, get_exponential_parameters)
 
     J_full = jac_buffers[tid]
+    J_view = @view J_full[1:dim, 1:dim]
 
-    MiCRM_stability.jacobian!(p,J_full)
+    MiCRM_stability.jacobian!(p,J_view)
 
     try 
         # Only store the real part as Float64 to save memory
         # @time stability[i,j,r] = real(eigsolve(J_view, 1, :LR)[1][1])
-       stability[i,c,r] = maximum(real.(eigvals(J_full)))
+       stability[i,j,r] = maximum(real.(eigvals(J_view)))
     catch
-        stability[i,c,r] = NaN
+        stability[i,j,r] = NaN
     end
 
     # 5. Thread-safe counter
     new_val = Threads.atomic_add!(completed, 1)
     if new_val % 100 == 0
-        print("\rProgress: ", new_val)
+         print("\rProgress: ", new_val)
     end
 end
 
 
-save("./Results/data/new_sims/mod_stability.jld2", Dict("l" => stability))
+save("./Results/data/size_stability.jld2", Dict("l" => stability))
