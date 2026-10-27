@@ -34,9 +34,9 @@ function niche_community(N,M,f,C,d,λ0,σ)
 
     #supply params
     Λ = 0.5 .+ rand(Uniform(-0.1,0.1),N) 
-    G = 1.0 .+ rand(Uniform(-0.1,0.1),N) 
-    α = 1.0 .+ rand(Uniform(-0.1,0.1),M) 
-    β = 1.0 .+ rand(Uniform(-0.1,0.1),M) 
+    G = rand(Uniform(0.1,1.0), N) 
+    α = rand(Uniform(0.1,1.0), N) 
+    β = rand(Uniform(0.1,1.0), M) 
     C_pert = zeros(M)
     
     s = MiCRM_stability.get_structural_params(c.N, c.M, c.U, c.D, Λ, G, α, β, C_pert)
